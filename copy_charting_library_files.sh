@@ -4,9 +4,9 @@ remove_if_directory_exists() {
 	if [ -d "$1" ]; then rm -Rf "$1"; fi
 }
 
-BRANCH="master";
+BRANCH="main";
 
-REPOSITORY='https://github.com/tradingview/charting_library/'
+REPOSITORY='https://github.com/MudrakshnMcShaw/charting_library'
 
 LATEST_HASH=$(git ls-remote $REPOSITORY $BRANCH | grep -Eo '^[[:alnum:]]+')
 

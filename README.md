@@ -24,3 +24,22 @@ React is a JavaScript library for building user interfaces. It is maintained by 
 ## About This Project
 
 This project was bootstrapped with [Create React App](https://github.com/facebookincubator/create-react-app).
+
+
+##### DOCUMENTATION ######
+
+# Overview
+This React component integrates a TradingView chart with custom data fetched from a backend API. It includes functionalities for searching symbols, resolving symbol details, fetching historical data, and setting up the TradingView widget.
+
+# Key Components
+fetchData: Fetches chart data from the backend API.
+formatDataForTradingView: Formats the fetched data to the format required by TradingView.
+Datafeed: Implements the TradingView data feed interface, providing methods for symbol search, symbol resolution, and bar data retrieval.
+App: The main React component that initializes and configures the TradingView widget.
+# Installation and Setup
+Install Dependencies: Ensure you have React and the TradingView Charting Library.
+Backend API: Set up your backend to provide chart data at the specified endpoint.
+Run the Application: Start your React application and ensure the backend API is running.
+
+# Conclusion
+This documentation and the commented code provide a clear understanding of how to integrate a TradingView chart in a React application with custom symbol types and data fetching from an API. If further customization or features are needed, the TradingView Charting Library documentation can be referred to for additional options and configurations.

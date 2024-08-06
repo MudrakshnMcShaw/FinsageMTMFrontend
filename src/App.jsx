@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-// import './App.css';
-import { widget } from './charting_library';
+// import './App.css'; // Uncomment this if you have CSS styles
+import { widget } from './charting_library'; // Import TradingView charting library
 
 // Function to fetch data from API
 async function fetchData(symbol, resolution, from, to) {
@@ -29,6 +29,7 @@ function formatDataForTradingView(data) {
   }).filter(item => item !== null);
 }
 
+// Predefined symbols list
 const symbols = [
   { symbol: 'client1', full_name: 'Client 1', type: 'client' },
   { symbol: 'client2', full_name: 'Client 2', type: 'client' },
@@ -42,6 +43,7 @@ const symbols = [
   { symbol: 'algo5', full_name: 'Algo 5', type: 'algo' }
 ];
 
+// Datafeed object implementing TradingView interface
 const Datafeed = {
   onReady: (callback) => {
     setTimeout(() => callback({
@@ -58,8 +60,8 @@ const Datafeed = {
     }), 0);
   },
 
+  // Search symbols based on user input and symbol type
   searchSymbols: async (userInput, exchange, symbolType, onResultReadyCallback) => {
-
     // Filter symbols based on user input and symbol type
     const filteredSymbols = symbols.filter(symbol => {
       const matchesInput = symbol.symbol.toLowerCase().startsWith(userInput.toLowerCase());
@@ -67,7 +69,7 @@ const Datafeed = {
       return matchesInput && matchesType;
     });
 
-    //lude both client and algo symbols when the type is "ClientAlgo"
+    // Include both client and algo symbols when the type is changed
     if (symbolType === "") {
       const clientSymbols = symbols.filter(symbol => symbol.type === 'client');
       const algoSymbols = symbols.filter(symbol => symbol.type === 'algo');
@@ -88,21 +90,18 @@ const Datafeed = {
       exchange: exchange,
       type: symbol.type
     }));
-    // Add selected symbol and other params to search params
-    // const searchParams = new URLSearchParams(window.location.search);
-    // searchParams.set('selectedSymbol', userInput);
 
-    // window.history.replaceState(null, '', `${window.location.pathname}?${searchParams.toString()}`);
     onResultReadyCallback(formattedSymbols);
   },
 
+  // Resolve symbol details
   resolveSymbol: (symbolName, onSymbolResolvedCallback, onResolveErrorCallback) => {
     setTimeout(() => {
       onSymbolResolvedCallback({
         name: symbolName,
         ticker: symbolName,
         session: '0915-1530',
-        timezone: 'Asia/Kolkata', // Updated timezone
+        timezone: 'Asia/Kolkata', // Updated timezone if needed
         has_no_volume: false,
         minmov: 1,
         pricescale: 100,
@@ -114,6 +113,7 @@ const Datafeed = {
     }, 0);
   },
 
+  // Fetch historical bar data
   getBars: async (symbolInfo, resolution, periodParams, historyCallback, onErrorCallback) => {
     const { from, to } = periodParams;
     try {
@@ -122,7 +122,6 @@ const Datafeed = {
         throw new Error('No data returned from fetchStockData');
       }
       const formattedData = formatDataForTradingView(data);
-      console.log(formattedData);
       historyCallback(formattedData, { noData: formattedData.length === 0 });
     } catch (error) {
       console.error('Error fetching bars:', error);
@@ -145,6 +144,7 @@ const Datafeed = {
   }
 };
 
+// Main React component
 const App = () => {
   const containerRef = React.useRef(null);
 
@@ -155,6 +155,7 @@ const App = () => {
         return;
       }
 
+      // These are the widgets you can add more widgets for more feature and also remove those widgets which are not needed
       const chart = new widget({
         container_id: 'tv-chart-container',
         container: containerRef.current,
@@ -174,7 +175,7 @@ const App = () => {
         theme: "dark",
         fullscreen: false,
         autosize: true,
-        hide_side_toolbar: false,
+        hide_side_toolbar: true,
         allow_symbol_change: true,
         withdateranges: true,
         news: ['headlines'],
@@ -183,10 +184,25 @@ const App = () => {
         hotlist: true,
         calendar: true,
         // header_saveload: true,
+        studiesOverrides: {},
       });
 
+      // here you can add any additional button and customize that button according to you
       chart.onChartReady(() => {
-        console.log('Chart has been initialized');
+        chart.headerReady().then(() => {
+          const button = chart.createButton();
+          button.setAttribute('title', 'Click to show a notification popup');
+          button.classList.add('apply-common-tooltip');
+          button.addEventListener('click', () => chart.showNoticeDialog({
+            title: 'Notification',
+            body: 'TradingView Charting Library API works correctly',
+            callback: () => {
+              console.log('Noticed!');
+            },
+          }));
+
+          button.innerHTML = 'Check API';
+        });
       });
 
       return () => {
@@ -207,3 +223,6 @@ const App = () => {
 }
 
 export default App;
+
+
+// I've added comments throughout the code to explain what each part does. This should help anyone reading the code understand its purpose and functionality.

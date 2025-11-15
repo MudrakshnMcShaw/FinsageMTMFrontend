@@ -1,0 +1,20 @@
+name: finsage_mtm # to give a name to the project
+version: "3.8"
+
+services:
+  daily_chart:
+    # image: daily_chart_frontend:latest
+    container_name: finsage_mtm_frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8989:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { widget } from "./charting_library";
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "http://91.203.134.194:8000/api";
 
 // Fetch all strategies
 async function fetchStrategies() {

@@ -1,24 +1,111 @@
 import React, { useEffect, useRef, useState } from "react";
 import { widget } from "./charting_library";
-
+// import { toast } from "sonner";
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 const API_BASE = "http://91.203.134.194:8000/api";
 
-// Fetch all strategies
-async function fetchStrategies() {
-  const res = await fetch(`${API_BASE}/strategies`);
+
+export default function TVChart() {
+  const chartContainerRef = useRef(null);
+  const [strategies, setStrategies] = useState([]);
+  const [files, setCsvFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState(null)
+
+  // Fetch all strategies
+// async function fetchStrategies() {
+//   const res = await fetch(`${API_BASE}/strategies`);
   
-  if (!res.ok) return [];
-  return await res.json();
+//   if (!res.ok || res.status === 503) {
+//     console.log(res.json())
+//     toast.error("Database is down!!")
+
+//     return []
+//   } 
+//   return await res.json();
+// }
+
+// async function fetchStrategies() {
+//   try {
+//     // if (errorMessage) setErrorMessage('')
+//     const res = await fetch(`${API_BASE}/strategies`);
+//     if (!res.ok) {
+//       // This is the key: actually AWAIT the JSON body
+//       let errorMessage = "Backend is down!!";
+//       try {
+//         const errorData = await res.json();
+//         if (errorData.detail) {
+//           errorMessage = errorData.detail;
+//           setErrorMessage(errorMessage)
+//         }
+//       } catch (jsonError) {
+//         // If body is empty or not JSON, fall back
+//         console.warn("Could not parse error JSON:", jsonError);
+//       }
+
+//       console.log("Backend error:", errorMessage);
+//       // toast.error(errorMessage);
+//       return [];
+//     }
+
+//     return await res.json();
+
+//   } catch (err) {
+//     console.error("Network error:", err);
+//     // toast.error("Network error - cannot reach server");
+//     return [];
+//   }
+// }
+
+async function fetchStrategies() {
+  try {
+    const res = await fetch(`${API_BASE}/strategies`);
+
+    if (!res.ok) {
+      let msg = "Backend is down!";
+      try {
+        const data = await res.json();
+        if (data.detail) msg = data.detail;
+      } catch {}
+
+      setErrorMessage(msg);   // ✅ ALWAYS SET HERE
+      return [];
+    }
+
+    return await res.json();
+
+  } catch (err) {
+    // Network error → server unreachable
+    setErrorMessage("Cannot reach server!");
+    return [];
+  }
 }
+
 
 // Fetch list of CSV files for a strategy
 async function fetchCsvFiles() {
-  const res = await fetch(`${API_BASE}/file`)
-  
-  if (!res.ok) return [];
-  return await res.json();
-}
+  try {
+    const res = await fetch(`${API_BASE}/file`);
 
+    if (!res.ok) {
+      let msg = "Backend is down!";
+      try {
+        const data = await res.json();
+        if (data.detail) msg = data.detail;
+      } catch {}
+
+      setErrorMessage(msg);   // ✅ ALWAYS SET HERE
+      return [];
+    }
+
+    return await res.json();
+  } catch (err) {
+    // toast.error("Failed to connect to server");
+    setErrorMessage("Cannot reach server!");
+    return [];
+  }
+}
 
 // Fetch OHLC from backend
 async function fetchMTM(strategyName) {
@@ -41,14 +128,6 @@ async function fetchMTM(strategyName) {
     return await res.json();
  } 
 
-
-
-export default function TVChart() {
-  const chartContainerRef = useRef(null);
-  const [strategies, setStrategies] = useState([]);
-  const [files, setCsvFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
    async function handleCSVUpload(e) {
   const file = e.target.files[0];
@@ -97,6 +176,8 @@ export default function TVChart() {
 
   xhr.send(formData);
 }
+
+
 
 
 //   const [searchTab, setSearchTab] = useState<'all' | 'strategies' | 'csv'>('all');
@@ -302,65 +383,174 @@ export default function TVChart() {
   }, [strategies, files]);
 
   // return <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />;
-  return (
-  <div style={{ position: "relative", width: "100%", height: "100%" }}>
-    {/* Upload UI */}
-    <div
-      style={{
-        position: "absolute",
-        top: 10,
-        right: 350,
-        zIndex: 20
-      }}
-    >
-      <label
+//   return (
+//   <div style={{ position: "relative", width: "100%", height: "100%" }}>
+
+//     <div
+//       style={{
+//         position: "absolute",
+//         top: 10,
+//         right: 350,
+//         zIndex: 20
+//       }}
+//     >
+//       <label
+//         style={{
+//           background: "#444",
+//           padding: "6px 12px",
+//           borderRadius: "6px",
+//           color: "white",
+//           cursor: "pointer",
+//           marginRight: "10px"
+//         }}
+//       >
+//         Upload CSV
+//         <input
+//           type="file"
+//           accept=".csv"
+//           style={{ display: "none" }}
+//           onChange={handleCSVUpload}
+//         />
+//       </label>
+
+//       {uploading && (
+//         <div
+//           style={{
+//             background: "#222",
+//             width: "150px",
+//             height: "8px",
+//             borderRadius: "8px"
+//           }}
+//         >
+//           <div
+//             style={{
+//               width: `${uploadProgress}%`,
+//               height: "100%",
+//               background: "#4caf50",
+//               transition: "width 0.2s",
+//               borderRadius: "8px"
+//             }}
+//           />
+//         </div>
+//       )}
+//     </div>
+
+//     {/* TradingView Chart */}
+//     <div
+//       ref={chartContainerRef}
+//       style={{ width: "100%", height: "100%" }}
+//     />
+//   </div>
+// );
+
+return (
+  <>
+    {errorMessage ? (
+      <div
         style={{
-          background: "#444",
-          padding: "6px 12px",
-          borderRadius: "6px",
-          color: "white",
-          cursor: "pointer",
-          marginRight: "10px"
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#131722",
+          color: "#ffffff",
+          zIndex: 50,
+          backdropFilter: "blur(4px)",
+          userSelect: "none",
         }}
       >
-        Upload CSV
-        <input
-          type="file"
-          accept=".csv"
-          style={{ display: "none" }}
-          onChange={handleCSVUpload}
-        />
-      </label>
-
-      {uploading && (
-        <div
+          <div
           style={{
-            background: "#222",
-            width: "150px",
-            height: "8px",
-            borderRadius: "8px"
+            textAlign: "center",
+            maxWidth: "620px",
+            padding: "24px 28px",
+            // background: "rgba(255, 255, 255, 0.05)",
+            borderRadius: "12px",
+            backdropFilter: "blur(8px)",
           }}
         >
-          <div
+          <ExclamationTriangleIcon
             style={{
-              width: `${uploadProgress}%`,
-              height: "100%",
-              background: "#4caf50",
-              transition: "width 0.2s",
-              borderRadius: "8px"
+              color: "#ffcc00",
+              width: "168px",
+              height: "168px",
+              marginBottom: "4px",
             }}
           />
+
+          <h3
+            style={{
+              margin: "0",
+              fontSize: "40px",
+              lineHeight: "1.4",
+              color: "#ffffff",
+              fontWeight: 600,
+            }}
+          >
+            {errorMessage}
+          </h3>
+
         </div>
-      )}
-    </div>
 
+      </div>
+    ) : (
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 350,
+            zIndex: 20,
+          }}
+        >
+          <label
+            style={{
+              background: "#444",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              color: "white",
+              cursor: "pointer",
+              marginRight: "10px",
+            }}
+          >
+            Upload CSV
+            <input
+              type="file"
+              accept=".csv"
+              style={{ display: "none" }}
+              onChange={handleCSVUpload}
+            />
+          </label>
 
-    {/* TradingView Chart */}
-    <div
-      ref={chartContainerRef}
-      style={{ width: "100%", height: "100%" }}
-    />
-  </div>
+          {uploading && (
+            <div
+              style={{
+                background: "#222",
+                width: "150px",
+                height: "8px",
+                borderRadius: "8px",
+              }}
+            >
+              <div
+                style={{
+                  width: `${uploadProgress}%`,
+                  height: "100%",
+                  background: "#4caf50",
+                  transition: "width 0.2s",
+                  borderRadius: "8px",
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
+      </div>
+    )}
+  </>
 );
+
 
 }

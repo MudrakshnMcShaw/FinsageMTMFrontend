@@ -1,377 +1,1074 @@
-import React, { useEffect, useRef, useState } from "react";
-import { widget } from "./charting_library";
+// import React, { useEffect, useRef, useState } from "react";
+// import { widget } from "./charting_library";
 // import { toast } from "sonner";
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-const API_BASE = "http://91.203.134.194:8000/api";
+// import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+// const API_BASE = "http://91.203.134.194:8000/api";
 
 
-export default function TVChart() {
-  const chartContainerRef = useRef(null);
-  const [strategies, setStrategies] = useState([]);
-  const [files, setCsvFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [errorMessage, setErrorMessage] = useState(null)
+// export default function TVChart() {
+//   const chartContainerRef = useRef(null);
+//   const [strategies, setStrategies] = useState([]);
+//   const [portfolios, setPortfolios] = useState([])
+//   const [files, setCsvFiles] = useState([]);
+//   const [jsonFiles, setJsonFiles] = useState([]);
+//   const [uploading, setUploading] = useState(false);
+//   const [uploadProgress, setUploadProgress] = useState(0);
+//   const [errorMessage, setErrorMessage] = useState(null)
+//   const [selectedCsvToDelete, setSelectedCsvToDelete] = useState("");
+//   const [rerender, setRerender] = useState(false)
+//   const tvWidgetRef = useRef(null);
 
-  // Fetch all strategies
-// async function fetchStrategies() {
-//   const res = await fetch(`${API_BASE}/strategies`);
-  
-//   if (!res.ok || res.status === 503) {
-//     console.log(res.json())
-//     toast.error("Database is down!!")
-
-//     return []
-//   } 
-//   return await res.json();
-// }
 
 // async function fetchStrategies() {
 //   try {
-//     // if (errorMessage) setErrorMessage('')
 //     const res = await fetch(`${API_BASE}/strategies`);
-//     if (!res.ok) {
-//       // This is the key: actually AWAIT the JSON body
-//       let errorMessage = "Backend is down!!";
-//       try {
-//         const errorData = await res.json();
-//         if (errorData.detail) {
-//           errorMessage = errorData.detail;
-//           setErrorMessage(errorMessage)
-//         }
-//       } catch (jsonError) {
-//         // If body is empty or not JSON, fall back
-//         console.warn("Could not parse error JSON:", jsonError);
-//       }
 
-//       console.log("Backend error:", errorMessage);
-//       // toast.error(errorMessage);
+//     if (!res.ok) {
+//       let msg = "Backend is down!";
+//       try {
+//         const data = await res.json();
+//         if (data.detail) msg = data.detail;
+//       } catch {}
+
+//       setErrorMessage(msg);   // ✅ ALWAYS SET HERE
 //       return [];
 //     }
 
 //     return await res.json();
 
 //   } catch (err) {
-//     console.error("Network error:", err);
-//     // toast.error("Network error - cannot reach server");
+//     // Network error → server unreachable
+//     setErrorMessage("Cannot reach server!");
 //     return [];
 //   }
 // }
 
-async function fetchStrategies() {
-  try {
-    const res = await fetch(`${API_BASE}/strategies`);
+// // fetch portfolios
+// async function fetchPortfolios() {
+//   try {
+//     const res = await fetch(`${API_BASE}/portfolio`);
 
-    if (!res.ok) {
-      let msg = "Backend is down!";
-      try {
-        const data = await res.json();
-        if (data.detail) msg = data.detail;
-      } catch {}
+//     if (!res.ok) {
+//       let msg = "Backend is down!";
+//       try {
+//         const data = await res.json();
+//         if (data.detail) msg = data.detail;
+//       } catch {}
 
-      setErrorMessage(msg);   // ✅ ALWAYS SET HERE
-      return [];
-    }
+//       setErrorMessage(msg);   // ✅ ALWAYS SET HERE
+//       return [];
+//     }
+//     // const response = await res.json()
+//     console.log(res)
 
-    return await res.json();
+//     return await res.json();
 
-  } catch (err) {
-    // Network error → server unreachable
-    setErrorMessage("Cannot reach server!");
-    return [];
-  }
-}
-
-
-// Fetch list of CSV files for a strategy
-async function fetchCsvFiles() {
-  try {
-    const res = await fetch(`${API_BASE}/file`);
-
-    if (!res.ok) {
-      let msg = "Backend is down!";
-      try {
-        const data = await res.json();
-        if (data.detail) msg = data.detail;
-      } catch {}
-
-      setErrorMessage(msg);   // ✅ ALWAYS SET HERE
-      return [];
-    }
-
-    return await res.json();
-  } catch (err) {
-    // toast.error("Failed to connect to server");
-    setErrorMessage("Cannot reach server!");
-    return [];
-  }
-}
-
-// Fetch OHLC from backend
-async function fetchMTM(strategyName) {
-  const url = `${API_BASE}/strategies/${encodeURIComponent(strategyName)}/mtm`;
-
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Failed to fetch MTM");
-
-  return await res.json();
-}
-
-// Fetch OHLC for CSV file
- async function fetchCsvData(fileId) {
-    console.log(`File ID SENT TO BACK: ${fileId}`)
-    const url = `${API_BASE}/file/${encodeURIComponent(fileId)}/mtm`;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch CSV data");
-
-    return await res.json();
- } 
+//   } catch (err) {
+//     // Network error → server unreachable
+//     setErrorMessage("Cannot reach server!");
+//     return [];
+//   }
+// }
 
 
-   async function handleCSVUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+// // Fetch list of CSV files for a strategy
+// async function fetchCsvFiles() {
+//   try {
+//     const res = await fetch(`${API_BASE}/file`);
 
-  setUploading(true);
-  setUploadProgress(0);
+//     if (!res.ok) {
+//       let msg = "Backend is down!";
+//       try {
+//         const data = await res.json();
+//         if (data.detail) msg = data.detail;
+//       } catch {}
 
-  const formData = new FormData();
-  formData.append("file", file);
+//       setErrorMessage(msg);   // ✅ ALWAYS SET HERE
+//       return [];
+//     }
 
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", `${API_BASE}/file/upload`, true);   // <-- your backend upload route
+//     return await res.json();
+//   } catch (err) {
+//     // toast.error("Failed to connect to server");
+//     setErrorMessage("Cannot reach server!");
+//     return [];
+//   }
+// }
 
-  // track upload progress
-  xhr.upload.onprogress = (evt) => {
-    if (evt.lengthComputable) {
-      const percent = Math.round((evt.loaded / evt.total) * 100);
-      setUploadProgress(percent);
-    }
-  };
+// // Fetch list of CSV files for a strategy
+// async function fetchJsonFiles() {
+//   try {
+//     const res = await fetch(`${API_BASE}/json-file`);
 
-  xhr.onreadystatechange = async function () {
-    if (xhr.readyState === 4) {
-      setUploading(false);
+//     if (!res.ok) {
+//       let msg = "Backend is down!";
+//       try {
+//         const data = await res.json();
+//         if (data.detail) msg = data.detail;
+//       } catch {}
 
-      if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText);
+//       setErrorMessage(msg);   // ✅ ALWAYS SET HERE
+//       return [];
+//     }
 
-        // Response MUST contain new file ID
-        const newFile = response.data; 
-        // example response:
-        // { filename: "...", file_id: "...", total_rows: 12345 }
+//     return await res.json();
+//   } catch (err) {
+//     // toast.error("Failed to connect to server");
+//     setErrorMessage("Cannot reach server!");
+//     return [];
+//   }
+// }
 
-        // Update file list so searchSymbols can see it
-        setCsvFiles(prev => [...prev, newFile]);
+// // Fetch OHLC from backend
+// async function fetchStrategyMTM(strategyName) {
+//   const url = `${API_BASE}/strategies/${encodeURIComponent(strategyName)}/mtm`;
 
-        // Auto-load into TradingView
-        chartRef.current?.chart().setSymbol(newFile.filename);
+//   const res = await fetch(url);
+//   if (!res.ok) throw new Error("Failed to fetch MTM");
 
-      } else {
-        alert("Upload failed");
+//   return await res.json();
+// }
+
+// async function fetchPortfolioMTM(portfolioName) {
+//   const url = `${API_BASE}/portfolio/${encodeURIComponent(portfolioName)}/mtm`;
+
+//   const res = await fetch(url);
+//   if (!res.ok) throw new Error("Failed to fetch MTM");
+
+//   return await res.json();
+// }
+
+// // Fetch OHLC for CSV file
+//  async function fetchCsvData(fileId) {
+//     // console.log(`File ID SENT TO BACK: ${fileId}`)
+//     const url = `${API_BASE}/file/${encodeURIComponent(fileId)}/mtm`;
+
+//     const res = await fetch(url);
+//     if (!res.ok) throw new Error("Failed to fetch CSV data");
+
+//     return await res.json();
+//  } 
+
+
+//   async function handleCSVUpload(e) {
+//   const file = e.target.files[0];
+//   if (!file) return;
+
+//   setUploading(true);
+//   setUploadProgress(0);
+
+//   const formData = new FormData();
+//   formData.append("file", file);
+
+//   const xhr = new XMLHttpRequest();
+//   xhr.open("POST", `${API_BASE}/file/upload`, true);  
+
+//   // track upload progress
+//   xhr.upload.onprogress = (evt) => {
+//     if (evt.lengthComputable) {
+//       const percent = Math.round((evt.loaded / evt.total) * 100);
+//       setUploadProgress(percent);
+//     }
+//   };
+
+//   xhr.onreadystatechange = async function () {
+//     if (xhr.readyState === 4) {
+//       setUploading(false);
+
+//       if (xhr.status === 200) {
+//         const response = JSON.parse(xhr.responseText);
+//         toast.success("CSV Uploaed Successfully")
+
+//         // Response MUST contain new file ID
+//         const newFile = response.data; 
+//         // example response:
+//         // { filename: "...", file_id: "...", total_rows: 12345 }
+
+//         // Update file list so searchSymbols can see it
+//         setCsvFiles(prev => [...prev, newFile]);
+
+//         // Auto-load into TradingView
+//         // chartRef.current?.chart().setSymbol(newFile.filename);
+
+//         // Give React 1 tick to update state before TradingView searches again
+//         setTimeout(() => {
+//           tvWidgetRef.current?.chart().setSymbol(newFile.filename);
+//         }, 10);
+
+//         setRerender((prev) => !prev)
+//       } else {
+//         toast.error("Upload failed");
+//       }
+//     }
+//   };
+
+//   xhr.send(formData);
+//   }
+
+//   async function deleteCsv(fileId) {
+//   try {
+//     const res = await fetch(`${API_BASE}/file/${fileId}`, {
+//       method: "DELETE",
+//     });
+
+//     if (!res.ok) {
+//       toast.error("Failed to delete CSV");
+//       return;
+//     }
+
+//     if (res.status === 200) {
+//       toast.success("CSV deleted successfully!");
+//       setRerender((prev) => !prev)
+//     }
+
+//     // Remove from UI
+//     setCsvFiles(prev => prev.filter(f => f.file_id !== fileId));
+
+//     // If the deleted file was selected in the chart, reset default symbol
+//     if (chartContainerRef.current) {
+//       const chart = chartContainerRef.current.chart();
+//       chart?.setSymbol(strategies[0]?.strategy || ""); 
+//     }
+
+//   } catch (err) {
+//     console.log(err);
+//   }
+// }
+
+
+//   useEffect(() => {
+//     // Load strategies list at start
+//     fetchStrategies().then((data) => setStrategies(data));
+//     fetchPortfolios().then((data) => setPortfolios(data));
+//     fetchCsvFiles().then((data) => setCsvFiles(data));
+//     fetchJsonFiles().then((data) => setJsonFiles(data));
+//   }, [rerender]);
+
+//   useEffect(() => {
+//     if (!chartContainerRef.current) return;
+
+//     // / Wait for BOTH strategies AND files
+//     if (strategies.length === 0 || files.length === 0) return;
+    
+//     let chart;
+
+//     // TradingView Datafeed
+//     const datafeed = {
+//       onReady: (cb) => {
+//           setTimeout(() => {
+//             cb({
+//               supports_search: true,
+//               supports_group_request: true,
+//               supports_marks: false,
+//               supports_timescale_marks: false,
+//               symbols_types: [
+//                 { name: "STRATEGY", value: "STRATEGY" },
+//                 { name: "PORTFOLIO", value: "PORTFOLIO" },
+//                 { name: "CSV", value: "CSV" },
+//                 { name: "JSON", value: "JSON" },
+//               ],
+//             });
+//           }, 0);
+//         },
+
+//     searchSymbols: (userInput, exchange, symbolType, onResultReady) => {
+//       const query = userInput.toLowerCase();
+
+//       let results = [];
+
+//       // === STRATEGIES ===
+//       if (!symbolType || symbolType === "STRATEGY") {
+//         const r = strategies
+//           .filter(s => s.strategy.toLowerCase().includes(query))
+//           .map(s => ({
+//             symbol: s.strategy,
+//             full_name: s.strategy,
+//             description: s.segment,
+//             type: "STRATEGY",
+//             exchange: "Custom",
+//             group: "Strategies",
+//           }));
+//         results.push(...r);
+//       }
+
+//       // === PORTFOLIOS ===
+//       if (!symbolType || symbolType === "PORTFOLIO") {
+//         const r = portfolios
+//           .filter(p => p.portfolio.toLowerCase().includes(query))
+//           .map(p => ({
+//             symbol: p.portfolio,
+//             full_name: p.portfolio,
+//             description: "Portfolio",
+//             type: "PORTFOLIO",
+//             exchange: "Custom",
+//             group: "Portfolios",
+//           }));
+//         results.push(...r);
+//       }
+
+//       // === CSV FILES ===
+//       if (!symbolType || symbolType === "CSV") {
+//         const r = files
+//           .filter(f => f.filename.toLowerCase().includes(query))
+//           .map(f => ({
+//             symbol: f.filename,
+//             full_name: f.filename,
+//             description: "CSV Upload",
+//             type: "CSV",
+//             exchange: "Custom",
+//             file_id: f.file_id,
+//             group: "CSV Files",
+//           }));
+//         results.push(...r);
+//       }
+
+//       if (!symbolType || symbolType === "JSON") {
+//         const r = jsonFiles
+//           .filter(f => f.filename.toLowerCase().includes(query))
+//           .map(f => ({
+//             symbol: f.filename,
+//             full_name: f.filename,
+//             description: "JSON Upload",
+//             type: "JSON",
+//             exchange: "Custom",
+//             file_id: f.file_id,
+//             group: "JSON Files",
+//           }));
+//         results.push(...r);
+//       }
+
+//       onResultReady(results);
+//     },
+
+//     resolveSymbol: (symbolName, onResolve, onError) => {
+//       setTimeout(() => {
+//         // CSV
+//         if (symbolName.endsWith(".csv")) {
+//           const file = files.find(f => f.filename === symbolName);
+//           if (!file) return onError("CSV not found");
+
+//           return onResolve({
+//             name: symbolName,
+//             full_name: symbolName,
+//             type: "CSV",
+//             file_id: file.file_id,
+//             session: "0915-1530",
+//             timezone: "Asia/Kolkata",
+//             listed_exchange: "Custom",
+//             exchange: "Custom",
+//             has_intraday: true,
+//             visible_plots_set: "ohlc",
+//             pricescale: 1,
+//             minmov: 1,
+//           });
+//         }
+
+//         // JSON
+//         if (symbolName.endsWith(".json")) {
+//           const file = jsonFiles.find(f => f.filename === symbolName);
+//           if (!file) return onError("JSON not found");
+
+//           return onResolve({
+//             name: symbolName,
+//             full_name: symbolName,
+//             type: "JSON",
+//             file_id: file.file_id,
+//             session: "0915-1530",
+//             timezone: "Asia/Kolkata",
+//             listed_exchange: "Custom",
+//             exchange: "Custom",
+//             has_intraday: true,
+//             visible_plots_set: "ohlc",
+//             pricescale: 1,
+//             minmov: 1,
+//           });
+//         }
+
+//         // STRATEGY
+//         const strategy = strategies.find(s => s.strategy === symbolName);
+//         if (strategy) {
+//           return onResolve({
+//             name: symbolName,
+//             full_name: symbolName,
+//             type: "STRATEGY",
+//             session: "0915-1530",
+//             timezone: "Asia/Kolkata",
+//             listed_exchange: "Custom",
+//             exchange: "Custom",
+//             has_intraday: true,
+//             visible_plots_set: "ohlc",
+//             pricescale: 1,
+//             minmov: 1,
+//           });
+//         }
+
+//         // PORTFOLIO
+//         const portfolio = portfolios.find(p => p.portfolio === symbolName);
+//         if (portfolio) {
+//           return onResolve({
+//             name: symbolName,
+//             full_name: symbolName,
+//             type: "PORTFOLIO",
+//             session: "0915-1530",
+//             timezone: "Asia/Kolkata",
+//             listed_exchange: "Custom",
+//             exchange: "Custom",
+//             has_intraday: true,
+//             visible_plots_set: "ohlc",
+//             pricescale: 1,
+//             minmov: 1,
+//           });
+//         }
+
+//         return onError("Symbol not found");
+//       }, 0);
+//     },
+
+
+//       // Fetch OHLC bars
+//       getBars: async (symbolInfo, resolution, periodParams, onHistory, onErr) => {
+//         try {
+//           // console.log("getBars called for:", symbolInfo.name, "Type:", symbolInfo.type);
+//           let data = [];
+
+//           if (symbolInfo.type === "CSV" || symbolInfo.type === "JSON") {
+//             data = await fetchCsvData(symbolInfo.file_id);
+//           } else if (symbolInfo.type === "STRATEGY") {
+//             data = await fetchStrategyMTM(symbolInfo.name);
+//           } else if (symbolInfo.type === "PORTFOLIO") {
+//             data = await fetchPortfolioMTM(symbolInfo.name);
+//           }
+
+//           const bars = data.map(d => ({
+//             time: d.time * 1000,
+//             open: d.open,
+//             high: d.high,
+//             low: d.low,
+//             close: d.close,
+//           }));
+
+//           onHistory(bars, { noData: bars.length === 0 });
+//         } catch (err) {
+//           onErr(err.message);
+//         }
+//       },
+//       subscribeBars: () => {},
+//       unsubscribeBars: () => {},
+//     };
+
+//     // Set default symbol safely
+//   const defaultSymbol = strategies[0]
+//     ? `${strategies[0].strategy}`
+//     : `${files[0].filename}`;
+
+//      chart = new widget({
+//       container: chartContainerRef.current,
+//       datafeed,
+//       symbol: defaultSymbol, // default symbol
+//       interval: "15",
+//       library_path: "/charting_library/",
+//       theme: "dark",
+//       autosize: true,
+//       timezone: "Asia/Kolkata"
+//     });
+//     tvWidgetRef.current = chart
+
+//     return () => chart.remove();
+//   }, [strategies, files, portfolios]);
+
+// return (
+//   <>
+//     {errorMessage ? (
+//       <div
+//         style={{
+//           position: "absolute",
+//           inset: 0,
+//           display: "flex",
+//           flexDirection: "column",
+//           alignItems: "center",
+//           justifyContent: "center",
+//           background: "#131722",
+//           color: "#ffffff",
+//           zIndex: 50,
+//           backdropFilter: "blur(4px)",
+//           userSelect: "none",
+//         }}
+//       >
+//           <div
+//           style={{
+//             textAlign: "center",
+//             maxWidth: "620px",
+//             padding: "24px 28px",
+//             // background: "rgba(255, 255, 255, 0.05)",
+//             borderRadius: "12px",
+//             backdropFilter: "blur(8px)",
+//           }}
+//         >
+//           <ExclamationTriangleIcon
+//             style={{
+//               color: "#ffcc00",
+//               width: "168px",
+//               height: "168px",
+//               marginBottom: "4px",
+//             }}
+//           />
+
+//           <h3
+//             style={{
+//               margin: "0",
+//               fontSize: "40px",
+//               lineHeight: "1.4",
+//               color: "#ffffff",
+//               fontWeight: 600,
+//             }}
+//           >
+//             {errorMessage}
+//           </h3>
+
+//         </div>
+
+//       </div>
+//     ) : (
+//       <div style={{ position: "relative", width: "100%", height: "100%" }}>
+//         <div
+//           style={{
+//             position: "absolute",
+//             top: 6,
+//             left: 450,
+//             zIndex: 20,
+//           }}
+//         >
+//           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+//           <select
+//             value={selectedCsvToDelete}
+//             onChange={(e) => setSelectedCsvToDelete(e.target.value)}
+//             style={{
+//               background: "#222",
+//               color: "white",
+//               padding: "6px 12px",
+//               borderRadius: "6px",
+//               border: "1px solid #555",
+//             }}
+//           >
+//             <option value="">Select CSV / JSON to delete</option>
+//             {files.map((file) => (
+//               <option key={file.file_id} value={file.file_id}>
+//                 {file.filename}
+//               </option>
+//             ))}
+//           </select>
+
+//           <button
+//             onClick={() => {
+//               if (!selectedCsvToDelete) {
+//                 toast.error("Please select a CSV file");
+//                 return;
+//               }
+//               deleteCsv(selectedCsvToDelete);
+//             }}
+//             style={{
+//               background: "#922727ff",
+//               padding: "6px 12px",
+//               borderRadius: "6px",
+//               color: "white",
+//               cursor: "pointer",
+//             }}
+//           >
+//             Delete
+//           </button>
+//         </div>
+
+
+//         </div>
+//         <div
+//           style={{
+//             position: "absolute",
+//             top: 10,
+//             right: 250,
+//             zIndex: 20,
+//           }}
+//         >
+//           <label
+//             style={{
+//               background: "#444",
+//               padding: "6px 12px",
+//               borderRadius: "6px",
+//               color: "white",
+//               cursor: "pointer",
+//               marginRight: "10px",
+//             }}
+//           >
+//             Upload CSV / JSON
+//             <input
+//               type="file"
+//               accept=".csv, application/json, .json"
+//               style={{ display: "none" }}
+//               onChange={handleCSVUpload}
+//             />
+//           </label>
+
+//           {uploading && (
+//             <div
+//               style={{
+//                 background: "#222",
+//                 width: "150px",
+//                 height: "8px",
+//                 borderRadius: "8px",
+//               }}
+//             >
+//               <div
+//                 style={{
+//                   width: `${uploadProgress}%`,
+//                   height: "100%",
+//                   background: "#4caf50",
+//                   transition: "width 0.2s",
+//                   borderRadius: "8px",
+//                 }}
+//               />
+//             </div>
+//           )}
+//         </div>
+
+//         <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
+//       </div>
+//     )}
+//   </>
+// );
+
+
+// }
+
+
+import React, { useEffect, useRef, useState } from "react";
+import { widget } from "./charting_library";
+import { toast } from "sonner";
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+
+const API_BASE = "http://91.203.134.194:8000/api";
+
+export default function TVChart() {
+  const chartContainerRef = useRef(null);
+  const [strategies, setStrategies] = useState([]);
+  const [portfolios, setPortfolios] = useState([]);
+  const [csvFiles, setCsvFiles] = useState([]);
+  const [jsonFiles, setJsonFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [selectedFileToDelete, setSelectedFileToDelete] = useState("");
+  const [rerender, setRerender] = useState(false);
+  const tvWidgetRef = useRef(null);
+
+  async function fetchStrategies() {
+    try {
+      const res = await fetch(`${API_BASE}/strategies`);
+      if (!res.ok) {
+        let msg = "Backend is down!";
+        try {
+          const data = await res.json();
+          if (data.detail) msg = data.detail;
+        } catch {}
+        setErrorMessage(msg);
+        return [];
       }
+      return await res.json();
+    } catch (err) {
+      setErrorMessage("Cannot reach server!");
+      return [];
     }
-  };
+  }
 
-  xhr.send(formData);
-}
+  async function fetchPortfolios() {
+    try {
+      const res = await fetch(`${API_BASE}/portfolio`);
+      if (!res.ok) {
+        let msg = "Backend is down!";
+        try {
+          const data = await res.json();
+          if (data.detail) msg = data.detail;
+        } catch {}
+        setErrorMessage(msg);
+        return [];
+      }
+      return await res.json();
+    } catch (err) {
+      setErrorMessage("Cannot reach server!");
+      return [];
+    }
+  }
 
+  async function fetchCsvFiles() {
+    try {
+      const res = await fetch(`${API_BASE}/file`);
+      if (!res.ok) {
+        let msg = "Backend is down!";
+        try {
+          const data = await res.json();
+          if (data.detail) msg = data.detail;
+        } catch {}
+        setErrorMessage(msg);
+        return [];
+      }
+      return await res.json();
+    } catch (err) {
+      setErrorMessage("Cannot reach server!");
+      return [];
+    }
+  }
 
+  async function fetchJsonFiles() {
+    try {
+      const res = await fetch(`${API_BASE}/json-file`);
+      if (!res.ok) {
+        let msg = "Backend is down!";
+        try {
+          const data = await res.json();
+          if (data.detail) msg = data.detail;
+        } catch {}
+        setErrorMessage(msg);
+        return [];
+      }
+      return await res.json();
+    } catch (err) {
+      setErrorMessage("Cannot reach server!");
+      return [];
+    }
+  }
 
+  async function fetchStrategyMTM(strategyName) {
+    const url = `${API_BASE}/strategies/${encodeURIComponent(strategyName)}/mtm`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch MTM");
+    return await res.json();
+  }
 
-//   const [searchTab, setSearchTab] = useState<'all' | 'strategies' | 'csv'>('all');
+  async function fetchPortfolioMTM(portfolioName) {
+    const url = `${API_BASE}/portfolio/${encodeURIComponent(portfolioName)}/mtm`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch MTM");
+    return await res.json();
+  }
+
+  async function fetchFileData(fileId) {
+    const url = `${API_BASE}/file/${encodeURIComponent(fileId)}/mtm`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch file data");
+    return await res.json();
+  }
+
+  async function handleCSVUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/file/upload`, true);
+
+    xhr.upload.onprogress = (evt) => {
+      if (evt.lengthComputable) {
+        const percent = Math.round((evt.loaded / evt.total) * 100);
+        setUploadProgress(percent);
+      }
+    };
+
+    xhr.onreadystatechange = async function () {
+      if (xhr.readyState === 4) {
+        setUploading(false);
+
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          toast.success("File uploaded successfully");
+
+          // ✅ FIX: Backend returns file object directly, not wrapped in 'data'
+          const newFile = {
+            file_id: response.file_id,
+            filename: response.filename,
+            file_type: response.file_type,
+          };
+
+          // Add to appropriate array based on file_type
+          if (response.file_type === "json") {
+            setJsonFiles(prev => [...prev, newFile]);
+          } else {
+            setCsvFiles(prev => [...prev, newFile]);
+          }
+
+          // Auto-load into TradingView
+          setTimeout(() => {
+            tvWidgetRef.current?.chart().setSymbol(newFile.filename);
+          }, 10);
+
+          setRerender((prev) => !prev);
+        } else {
+          toast.error("Upload failed");
+        }
+      }
+    };
+
+    xhr.send(formData);
+  }
+
+  async function deleteFile(fileId) {
+    try {
+      const res = await fetch(`${API_BASE}/file/${fileId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        toast.error("Failed to delete file");
+        return;
+      }
+
+      if (res.status === 200) {
+        toast.success("File deleted successfully!");
+        setRerender((prev) => !prev);
+      }
+
+      // Remove from both arrays
+      setCsvFiles(prev => prev.filter(f => f.file_id !== fileId));
+      setJsonFiles(prev => prev.filter(f => f.file_id !== fileId));
+      setSelectedFileToDelete("");
+
+      // Reset chart if deleted file was selected
+      if (chartContainerRef.current) {
+        const chart = chartContainerRef.current.chart?.();
+        chart?.setSymbol(strategies[0]?.strategy || "");
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
   useEffect(() => {
-    // Load strategies list at start
     fetchStrategies().then((data) => setStrategies(data));
+    fetchPortfolios().then((data) => setPortfolios(data));
     fetchCsvFiles().then((data) => setCsvFiles(data));
-  }, []);
+    fetchJsonFiles().then((data) => setJsonFiles(data));
+  }, [rerender]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // / Wait for BOTH strategies AND files
-    if (strategies.length === 0 || files.length === 0) return;
-    
+    if (strategies.length === 0 && csvFiles.length === 0 && jsonFiles.length === 0) return;
+
     let chart;
 
-    // TradingView Datafeed
     const datafeed = {
       onReady: (cb) => {
         setTimeout(() => {
-            cb({
+          cb({
             supports_search: true,
-            supports_group_request: false,
+            supports_group_request: true,
             supports_marks: false,
             supports_timescale_marks: false,
-            });
+            symbols_types: [
+              { name: "STRATEGY", value: "STRATEGY" },
+              { name: "PORTFOLIO", value: "PORTFOLIO" },
+              { name: "CSV", value: "CSV" },
+              { name: "JSON", value: "JSON" },
+            ],
+          });
         }, 0);
-        },
+      },
 
+      searchSymbols: (userInput, exchange, symbolType, onResultReady) => {
+        const query = userInput.toLowerCase();
+        let results = [];
 
-      // Search Strategies
-    //   searchSymbols: (userInput, exchange, type, onResultReady) => {
-    //     const filtered = strategies
-    //       .filter((s) =>
-    //         s.strategy.toLowerCase().includes(userInput.toLowerCase())
-    //       )
-    //       .map((s) => ({
-    //         symbol: s.strategy,
-    //         full_name: s.strategy,
-    //         description: `${s.segment}`,
-    //         type: `${s.type}`,
-    //         exchange: "Custom",       // REQUIRED
-    //         }));
-
-
-    //     onResultReady(filtered);
-    //   },
-
-    searchSymbols: (userInput, exchange, symbolType, onResultReady) => {
-  const strategyResults = strategies
-    .filter(s => s.strategy.toLowerCase().includes(userInput.toLowerCase()))
-    .map(s => ({
-      symbol: s.strategy,           // raw name
-      full_name: s.strategy,
-      description: s.segment,
-      type: "strategy",
-      exchange: "Custom",
-    }));
-
-  const csvResults = files
-    .filter(f => f.filename.toLowerCase().includes(userInput.toLowerCase()))
-    .map(f => ({
-      symbol: f.filename,           // raw filename (ends with .csv)
-      full_name: f.filename,
-      description: "CSV File",
-      type: "csv",
-      exchange: "Custom",
-      file_id: f.file_id,           // pass file_id
-    }));
-
-  onResultReady([...strategyResults, ...csvResults]);
-},
-
-
-      // Resolve selected symbol
-    // resolveSymbol: (symbolName, onResolve, onError) => {
-    // const symbolInfo = {
-    //     name: symbolName,
-    //     full_name: symbolName,
-    //     ticker: symbolName,
-    //     description: symbolName,
-    //     type: "strategy",
-    //     session: "0915-1530",
-    //     exchange: "Custom",
-    //     listed_exchange: "Custom",
-    //     timezone: "Asia/Kolkata",
-    //     format: "price",
-    //     minmov: 1,
-    //     pricescale: 1,
-    //     has_intraday: true,
-    //     has_no_volume: true,
-    // };
-    // setTimeout(() => onResolve(symbolInfo), 0);
-    // // onResolve(symbolInfo);
-    // },
-
-    resolveSymbol: (symbolName, onResolve, onError) => {
-        const isCsv = symbolName.endsWith(".csv");
-        let type = isCsv ? "csv" : "strategy";
-        let fileId = null;
-
-        if (isCsv) {
-            const file = files.find(f => f.filename === symbolName);
-            if (!file) {
-            return setTimeout(() => onError("CSV file not found"), 0);
-            }
-            fileId = file.file_id;
+        // === STRATEGIES ===
+        if (!symbolType || symbolType === "STRATEGY") {
+          const r = strategies
+            .filter(s => s.strategy.toLowerCase().includes(query))
+            .map(s => ({
+              symbol: s.strategy,
+              full_name: s.strategy,
+              description: s.segment,
+              type: "STRATEGY",
+              exchange: "Custom",
+              group: "Strategies",
+            }));
+          results.push(...r);
         }
 
-        const symbolInfo = {
-            name: symbolName,
-            full_name: symbolName,
-            ticker: symbolName,
-            description: symbolName,
-            type,
-            file_id: fileId,
-            session: "0915-1530",
-            exchange: "Custom",
-            listed_exchange: "Custom",
-            timezone: "Asia/Kolkata",
-            format: "price",
-            minmov: 1,
-            pricescale: 1,
-            has_intraday: true,
-            has_no_volume: true,
-        };
-
-        setTimeout(() => onResolve(symbolInfo), 0);
-        },
-
-      // Fetch OHLC bars
-    //   getBars: async (symbolInfo, resolution, periodParams, onHistory, onErr) => {
-    //     try {
-    //       const raw = await fetchMTM(symbolInfo.name);
-
-    //       const bars = raw.map((item) => ({
-    //         time: item.time * 1000,
-    //         open: item.open,
-    //         high: item.high,
-    //         low: item.low,
-    //         close: item.close,
-    //       }));
-
-    //       onHistory(bars, { noData: bars.length === 0 });
-    //     } catch (e) {
-    //       console.error("Error fetching bars:", e);
-    //       onErr(e);
-    //     }
-    //   },
-    getBars: async (symbolInfo, resolution, periodParams, onHistory, onErr) => {
-    try {
-        console.log("getBars →", symbolInfo); // Debug
-
-        let data = [];
-
-        if (symbolInfo.type === "csv") {
-        if (!symbolInfo.file_id) {
-            return onErr("Missing file_id for CSV");
-        }
-        data = await fetchCsvData(symbolInfo.file_id);
-        } else {
-        data = await fetchMTM(symbolInfo.name);
+        // === PORTFOLIOS ===
+        if (!symbolType || symbolType === "PORTFOLIO") {
+          const r = portfolios
+            .filter(p => p.portfolio.toLowerCase().includes(query))
+            .map(p => ({
+              symbol: p.portfolio,
+              full_name: p.portfolio,
+              description: "Portfolio",
+              type: "PORTFOLIO",
+              exchange: "Custom",
+              group: "Portfolios",
+            }));
+          results.push(...r);
         }
 
-        const bars = data.map(item => ({
-        time: item.time * 1000,
-        open: item.open,
-        high: item.high,
-        low: item.low,
-        close: item.close,
-        }));
+        // === CSV FILES ===
+        if (!symbolType || symbolType === "CSV") {
+          const r = csvFiles
+            .filter(f => f.filename.toLowerCase().includes(query))
+            .map(f => ({
+              symbol: f.filename,
+              full_name: f.filename,
+              description: "CSV Upload",
+              type: "CSV",
+              exchange: "Custom",
+              file_id: f.file_id,
+              group: "CSV Files",
+            }));
+          results.push(...r);
+        }
 
-        onHistory(bars, { noData: bars.length === 0 });
-    } catch (e) {
-        console.error("getBars error:", e);
-        onErr(e.message || "Failed to load data");
-    }
-    },
+        // === JSON FILES ===
+        if (!symbolType || symbolType === "JSON") {
+          const r = jsonFiles
+            .filter(f => f.filename.toLowerCase().includes(query))
+            .map(f => ({
+              symbol: f.filename,
+              full_name: f.filename,
+              description: "JSON Upload",
+              type: "JSON",
+              exchange: "Custom",
+              file_id: f.file_id,
+              group: "JSON Files",
+            }));
+          results.push(...r);
+        }
+
+        onResultReady(results);
+      },
+
+      resolveSymbol: (symbolName, onResolve, onError) => {
+        setTimeout(() => {
+          // ✅ FIX: Use symbolInfo.type instead of checking filename extension
+          // CSV files
+          const csvFile = csvFiles.find(f => f.filename === symbolName);
+          if (csvFile) {
+            return onResolve({
+              name: symbolName,
+              full_name: symbolName,
+              type: "CSV",
+              file_id: csvFile.file_id,
+              session: "0915-1530",
+              timezone: "Asia/Kolkata",
+              listed_exchange: "Custom",
+              exchange: "Custom",
+              has_intraday: true,
+              visible_plots_set: "ohlc",
+              pricescale: 1,
+              minmov: 1,
+            });
+          }
+
+          // JSON files
+          const jsonFile = jsonFiles.find(f => f.filename === symbolName);
+          if (jsonFile) {
+            return onResolve({
+              name: symbolName,
+              full_name: symbolName,
+              type: "JSON",
+              file_id: jsonFile.file_id,
+              session: "0915-1530",
+              timezone: "Asia/Kolkata",
+              listed_exchange: "Custom",
+              exchange: "Custom",
+              has_intraday: true,
+              visible_plots_set: "ohlc",
+              pricescale: 1,
+              minmov: 1,
+            });
+          }
+
+          // STRATEGY
+          const strategy = strategies.find(s => s.strategy === symbolName);
+          if (strategy) {
+            return onResolve({
+              name: symbolName,
+              full_name: symbolName,
+              type: "STRATEGY",
+              session: "0915-1530",
+              timezone: "Asia/Kolkata",
+              listed_exchange: "Custom",
+              exchange: "Custom",
+              has_intraday: true,
+              visible_plots_set: "ohlc",
+              pricescale: 1,
+              minmov: 1,
+            });
+          }
+
+          // PORTFOLIO
+          const portfolio = portfolios.find(p => p.portfolio === symbolName);
+          if (portfolio) {
+            return onResolve({
+              name: symbolName,
+              full_name: symbolName,
+              type: "PORTFOLIO",
+              session: "0915-1530",
+              timezone: "Asia/Kolkata",
+              listed_exchange: "Custom",
+              exchange: "Custom",
+              has_intraday: true,
+              visible_plots_set: "ohlc",
+              pricescale: 1,
+              minmov: 1,
+            });
+          }
+
+          return onError("Symbol not found");
+        }, 0);
+      },
+
+      getBars: async (symbolInfo, resolution, periodParams, onHistory, onErr) => {
+        try {
+          let data = [];
+
+          // ✅ FIX: Use symbolInfo.type to determine data source
+          if (symbolInfo.type === "CSV" || symbolInfo.type === "JSON") {
+            data = await fetchFileData(symbolInfo.file_id);
+          } else if (symbolInfo.type === "STRATEGY") {
+            data = await fetchStrategyMTM(symbolInfo.name);
+          } else if (symbolInfo.type === "PORTFOLIO") {
+            data = await fetchPortfolioMTM(symbolInfo.name);
+          }
+
+          const bars = data.map(d => ({
+            time: d.time * 1000,
+            open: d.open,
+            high: d.high,
+            low: d.low,
+            close: d.close,
+          }));
+
+          onHistory(bars, { noData: bars.length === 0 });
+        } catch (err) {
+          onErr(err.message);
+        }
+      },
 
       subscribeBars: () => {},
       unsubscribeBars: () => {},
     };
 
-    // Set default symbol safely
-  const defaultSymbol = strategies[0]
-    ? `${strategies[0].strategy}`
-    : `${files[0].filename}`;
+    const defaultSymbol = strategies[0]
+      ? `${strategies[0].strategy}`
+      : csvFiles[0]
+      ? `${csvFiles[0].filename}`
+      : jsonFiles[0]
+      ? `${jsonFiles[0].filename}`
+      : "DEFAULT";
 
-     chart = new widget({
+    chart = new widget({
       container: chartContainerRef.current,
       datafeed,
-      symbol: defaultSymbol, // default symbol
+      symbol: defaultSymbol,
       interval: "15",
       library_path: "/charting_library/",
       theme: "dark",
@@ -379,178 +1076,179 @@ async function fetchMTM(strategyName) {
       timezone: "Asia/Kolkata"
     });
 
+    tvWidgetRef.current = chart;
+
     return () => chart.remove();
-  }, [strategies, files]);
+  }, [strategies, csvFiles, jsonFiles, portfolios]);
 
-  // return <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />;
-//   return (
-//   <div style={{ position: "relative", width: "100%", height: "100%" }}>
-
-//     <div
-//       style={{
-//         position: "absolute",
-//         top: 10,
-//         right: 350,
-//         zIndex: 20
-//       }}
-//     >
-//       <label
-//         style={{
-//           background: "#444",
-//           padding: "6px 12px",
-//           borderRadius: "6px",
-//           color: "white",
-//           cursor: "pointer",
-//           marginRight: "10px"
-//         }}
-//       >
-//         Upload CSV
-//         <input
-//           type="file"
-//           accept=".csv"
-//           style={{ display: "none" }}
-//           onChange={handleCSVUpload}
-//         />
-//       </label>
-
-//       {uploading && (
-//         <div
-//           style={{
-//             background: "#222",
-//             width: "150px",
-//             height: "8px",
-//             borderRadius: "8px"
-//           }}
-//         >
-//           <div
-//             style={{
-//               width: `${uploadProgress}%`,
-//               height: "100%",
-//               background: "#4caf50",
-//               transition: "width 0.2s",
-//               borderRadius: "8px"
-//             }}
-//           />
-//         </div>
-//       )}
-//     </div>
-
-//     {/* TradingView Chart */}
-//     <div
-//       ref={chartContainerRef}
-//       style={{ width: "100%", height: "100%" }}
-//     />
-//   </div>
-// );
-
-return (
-  <>
-    {errorMessage ? (
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#131722",
-          color: "#ffffff",
-          zIndex: 50,
-          backdropFilter: "blur(4px)",
-          userSelect: "none",
-        }}
-      >
-          <div
-          style={{
-            textAlign: "center",
-            maxWidth: "620px",
-            padding: "24px 28px",
-            // background: "rgba(255, 255, 255, 0.05)",
-            borderRadius: "12px",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <ExclamationTriangleIcon
-            style={{
-              color: "#ffcc00",
-              width: "168px",
-              height: "168px",
-              marginBottom: "4px",
-            }}
-          />
-
-          <h3
-            style={{
-              margin: "0",
-              fontSize: "40px",
-              lineHeight: "1.4",
-              color: "#ffffff",
-              fontWeight: 600,
-            }}
-          >
-            {errorMessage}
-          </h3>
-
-        </div>
-
-      </div>
-    ) : (
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+  return (
+    <>
+      {errorMessage ? (
         <div
           style={{
             position: "absolute",
-            top: 10,
-            right: 350,
-            zIndex: 20,
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#131722",
+            color: "#ffffff",
+            zIndex: 50,
+            backdropFilter: "blur(4px)",
+            userSelect: "none",
           }}
         >
-          <label
+          <div
             style={{
-              background: "#444",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              color: "white",
-              cursor: "pointer",
-              marginRight: "10px",
+              textAlign: "center",
+              maxWidth: "620px",
+              padding: "24px 28px",
+              borderRadius: "12px",
+              backdropFilter: "blur(8px)",
             }}
           >
-            Upload CSV
-            <input
-              type="file"
-              accept=".csv"
-              style={{ display: "none" }}
-              onChange={handleCSVUpload}
-            />
-          </label>
-
-          {uploading && (
-            <div
+            <ExclamationTriangleIcon
               style={{
-                background: "#222",
-                width: "150px",
-                height: "8px",
-                borderRadius: "8px",
+                color: "#ffcc00",
+                width: "168px",
+                height: "168px",
+                marginBottom: "4px",
+              }}
+            />
+            <h3
+              style={{
+                margin: "0",
+                fontSize: "40px",
+                lineHeight: "1.4",
+                color: "#ffffff",
+                fontWeight: 600,
               }}
             >
+              {errorMessage}
+            </h3>
+          </div>
+        </div>
+      ) : (
+        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+          {/* Delete File Section */}
+          <div
+            style={{
+              position: "absolute",
+              top: 6,
+              left: 450,
+              zIndex: 20,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <select
+                value={selectedFileToDelete}
+                onChange={(e) => setSelectedFileToDelete(e.target.value)}
+                style={{
+                  background: "#222",
+                  color: "white",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #555",
+                }}
+              >
+                <option value="">Select CSV / JSON to delete</option>
+                {/* CSV Files */}
+                {csvFiles.length > 0 && (
+                  <optgroup label="CSV Files">
+                    {csvFiles.map((file) => (
+                      <option key={file.file_id} value={file.file_id}>
+                        {file.filename}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {/* JSON Files */}
+                {jsonFiles.length > 0 && (
+                  <optgroup label="JSON Files">
+                    {jsonFiles.map((file) => (
+                      <option key={file.file_id} value={file.file_id}>
+                        {file.filename}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+
+              <button
+                onClick={() => {
+                  if (!selectedFileToDelete) {
+                    toast.error("Please select a file");
+                    return;
+                  }
+                  deleteFile(selectedFileToDelete);
+                }}
+                style={{
+                  background: "#922727ff",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+
+          {/* Upload Section */}
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 250,
+              zIndex: 20,
+            }}
+          >
+            <label
+              style={{
+                background: "#444",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                color: "white",
+                cursor: "pointer",
+                marginRight: "10px",
+              }}
+            >
+              Upload CSV / JSON
+              <input
+                type="file"
+                accept=".csv, .json, application/json"
+                style={{ display: "none" }}
+                onChange={handleCSVUpload}
+              />
+            </label>
+
+            {uploading && (
               <div
                 style={{
-                  width: `${uploadProgress}%`,
-                  height: "100%",
-                  background: "#4caf50",
-                  transition: "width 0.2s",
+                  background: "#222",
+                  width: "150px",
+                  height: "8px",
                   borderRadius: "8px",
                 }}
-              />
-            </div>
-          )}
+              >
+                <div
+                  style={{
+                    width: `${uploadProgress}%`,
+                    height: "100%",
+                    background: "#4caf50",
+                    transition: "width 0.2s",
+                    borderRadius: "8px",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
         </div>
-
-        <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
-      </div>
-    )}
-  </>
-);
-
-
+      )}
+    </>
+  );
 }

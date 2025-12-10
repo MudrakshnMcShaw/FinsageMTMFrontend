@@ -345,7 +345,7 @@ export default function TVChart() {
           // Build URL with from/to in seconds (TradingView gives seconds)
           let url = "";
           if (symbolInfo.type === "CSV" || symbolInfo.type === "JSON") {
-            url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm?from=${from}&to=${to}`;
+            url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm`;
           } else if (symbolInfo.type === "STRATEGY") {
             url = `${API_BASE}/strategies/${encodeURIComponent(symbolInfo.name)}/mtm`;
           } else if (symbolInfo.type === "PORTFOLIO") {
@@ -372,16 +372,17 @@ export default function TVChart() {
             close: parseFloat(item.close),
           }));
 
-          // Important: sort just in case
           // bars.sort((a, b) => a.time - b.time);
 
-          // Tell TradingView if there's more data on the left (older)
-          const noData = bars.length === 0;
+          const oldestAvailableTime = bars[0].time / 1000;  // in seconds
+          // console.log("Oldest available time (s):", oldestAvailableTime);
 
-          // onHistoryCallback(bars, {noData: bars.length === 0});
+          // If TradingView asked for data older than what we have → tell it "no more"
+          const hasMore = from < oldestAvailableTime;
+
           onHistoryCallback(bars, {
-            noData: noData,
-            nextTime: undefined // Signals no more data to fetch
+            noData: false,
+            hasMore: hasMore 
           });
 
         } catch (error) {
@@ -389,6 +390,8 @@ export default function TVChart() {
           onErrorCallback(error.message || "Failed to load data");
         }
       },
+
+  
             
       resolveSymbol: (symbolName, onResolve, onError) => {
         setTimeout(() => {
@@ -498,7 +501,12 @@ export default function TVChart() {
       library_path: "/charting_library/",
       theme: "dark",
       autosize: true,
-      timezone: "Asia/Kolkata"
+      timezone: "Asia/Kolkata",
+      charts_storage_url: API_BASE,  
+      client_id: "finsage_user",      // e.g. your website or tenant ID
+      user_id: "finsage_Id",          // unique user ID
+      enabled_features: ["chart_template_storage"],
+      charts_storage_api_version: "1.1",
     });
 
     tvWidgetRef.current = chart;
@@ -561,11 +569,11 @@ export default function TVChart() {
             style={{
               position: "absolute",
               top: 6,
-              left: 450,
+              left: 650,
               zIndex: 20,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
               <select
                 value={selectedFileToDelete}
                 onChange={(e) => setSelectedFileToDelete(e.target.value)}
@@ -574,10 +582,11 @@ export default function TVChart() {
                   color: "white",
                   padding: "6px 12px",
                   borderRadius: "6px",
+                  width: "50%",
                   border: "1px solid #555",
                 }}
               >
-                <option value="">Select CSV / JSON to delete</option>
+                <option value="">Select CSV/JSON to delete</option>
                 {/* CSV Files */}
                 {csvFiles.length > 0 && (
                   <optgroup label="CSV Files">

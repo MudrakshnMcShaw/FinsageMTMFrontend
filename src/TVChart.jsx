@@ -307,90 +307,49 @@ export default function TVChart() {
         onResultReady(results);
       },
 
-
-      // getBars: async (symbolInfo, resolution, periodParams, onHistory, onErr) => {
-      //   try {
-      //     let data = [];
-
-      //     // ✅ FIX: Use symbolInfo.type to determine data source
-      //     if (symbolInfo.type === "CSV" || symbolInfo.type === "JSON") {
-      //       data = await fetchFileData(symbolInfo.file_id);
-      //     } else if (symbolInfo.type === "STRATEGY") {
-      //       data = await fetchStrategyMTM(symbolInfo.name);
-      //     } else if (symbolInfo.type === "PORTFOLIO") {
-      //       data = await fetchPortfolioMTM(symbolInfo.name);
-      //     }
-
-      //     const bars = data.map(d => ({
-      //       time: d.time,
-      //       open: d.open,
-      //       high: d.high,
-      //       low: d.low,
-      //       close: d.close,
-      //     }));
-
-      //     bars.sort((a, b) => a.time - b.time);
-          
-
-      //     onHistory(bars, { noData: bars.length === 0 });
-      //   } catch (err) {
-      //     onErr(err.message);
-      //   }
-      // },  
-  
       getBars: async function (symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
         try {
-          const { from, to, firstDataRequest } = periodParams;
-
-          // Build URL with from/to in seconds (TradingView gives seconds)
+          const { from, to, countBack, firstDataRequest } = periodParams; 
           let url = "";
           if (symbolInfo.type === "CSV" || symbolInfo.type === "JSON") {
+            // if (firstDataRequest && countBack) {
+            // url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm?to=${to}&countBack=${countBack}`;
+            // }
+            // else {
+            // url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm?from=${from}&to=${to}`;
+            // }
             url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm`;
           } else if (symbolInfo.type === "STRATEGY") {
             url = `${API_BASE}/strategies/${encodeURIComponent(symbolInfo.name)}/mtm`;
           } else if (symbolInfo.type === "PORTFOLIO") {
             url = `${API_BASE}/portfolio/${encodeURIComponent(symbolInfo.name)}/mtm`;
           }
-
           const response = await fetch(url);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
-
           const data = await response.json();
-
           if (!Array.isArray(data)) {
             onHistoryCallback([], { noData: true });
             return;
           }
-
-          const bars = data.map(item => ({
-            time: item.time,      
+          const bars = data
+          .map(item => ({
+            time: item.time,
             open: parseFloat(item.open),
             high: parseFloat(item.high),
             low: parseFloat(item.low),
             close: parseFloat(item.close),
           }));
 
-          // bars.sort((a, b) => a.time - b.time);
-
-          const oldestAvailableTime = bars[0].time / 1000;  // in seconds
-          // console.log("Oldest available time (s):", oldestAvailableTime);
-
-          // If TradingView asked for data older than what we have → tell it "no more"
-          const hasMore = from < oldestAvailableTime;
-
-          onHistoryCallback(bars, {
-            noData: false,
-            hasMore: hasMore 
-          });
+          const noData = bars.length === 0;    
+          onHistoryCallback(bars, {noData});
 
         } catch (error) {
           console.error("Error loading bars:", error);
           onErrorCallback(error.message || "Failed to load data");
         }
       },
-
   
             
       resolveSymbol: (symbolName, onResolve, onError) => {
@@ -403,7 +362,8 @@ export default function TVChart() {
               full_name: symbolName,
               type: "CSV",
               file_id: csvFile.file_id,
-              session: "0915-1531",
+              // session: "0915-1531",
+              session: "24x7",
               timezone: "Asia/Kolkata",
               listed_exchange: "Custom",
               exchange: "Custom",
@@ -424,7 +384,8 @@ export default function TVChart() {
               full_name: symbolName,
               type: "JSON",
               file_id: jsonFile.file_id,
-              session: "0915-1531",
+              // session: "0915-1531",
+              session: "24x7",
               timezone: "Asia/Kolkata",
               listed_exchange: "Custom",
               exchange: "Custom",
@@ -445,6 +406,7 @@ export default function TVChart() {
               full_name: symbolName,
               type: "STRATEGY",
               session: "0915-1531",
+              // session: "0000-2400",
               timezone: "Asia/Kolkata",
               listed_exchange: "Custom",
               exchange: "Custom",

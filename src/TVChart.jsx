@@ -17,6 +17,21 @@ export default function TVChart() {
   const [selectedFileToDelete, setSelectedFileToDelete] = useState("");
   const [rerender, setRerender] = useState(false);
   const tvWidgetRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const renkoMakerRef = useRef(null)
+  const [showRenko, setShowRenko] = useState(false);
+  const [renkoData, setRenkoData] = useState(null);
+  const [isRenkoActive, setIsRenkoActive] = useState(false);
+
+  const inputStyle = {
+              width: "100%",
+              marginTop: "6px",
+              padding: "8px 10px",
+              borderRadius: "6px",
+              backgroundColor: "#0000",
+              color: "#fff",
+              outline: "none",
+    };
 
   async function fetchStrategies() {
     try {
@@ -115,6 +130,84 @@ export default function TVChart() {
     return await res.json();
   }
 
+async function requestRenko(value, totalMargin) {
+  try {
+    const chart = tvWidgetRef.current?.activeChart();
+    const symbol = chart?.symbol();
+
+    if (!symbol) {
+      toast.error("No chart selected");
+      return;
+    }
+
+    // 👇 Detect type
+    let type = "strategy";
+    let name = symbol;
+
+    // You already have this info in symbol search
+    const selectedCSV = csvFiles.find(f => f.filename === symbol);
+    const selectedJSON = jsonFiles.find(f => f.filename === symbol);
+    const selectedPortfolio = portfolios.find(p => p.portfolio === symbol);
+
+    if (selectedCSV || selectedJSON) {
+      type = "file";
+      name = selectedCSV?.file_id || selectedJSON?.file_id;
+    } else if (selectedPortfolio) {
+      type = "portfolio";
+      name = symbol;
+    }
+
+    const params = new URLSearchParams({
+      type,
+      name,
+      brickType: "close",
+      method: "percentage",
+      value: value,
+      margin: totalMargin
+    });
+
+    window.open(`${window.location.origin}/renko-chart?${params.toString()}`, "_blank");
+
+    setShowRenko(false);
+    toast.success("Opened Renko chart");
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to open Renko chart");
+  }
+}
+
+
+    async function makeRenkoOff() {
+    // if (!renkoMakerRef.current) return;
+
+    try {
+      
+      // set the input config to local storage
+      localStorage.removeItem("renkoConfig")
+      setIsRenkoActive(false);
+
+      setTimeout(() => {
+        if (tvWidgetRef.current?.activeChart) {
+          const chart =  tvWidgetRef.current.activeChart();
+          
+          if (chart) {
+            chart.resetData();
+            chart.executeActionById("chartResetData");
+          }
+        }
+        
+      }, 100);
+      window.location.reload()
+      
+      toast.success("Normal chart generated");
+    } catch (err) {
+      console.error("Normal request failed:", err);
+      toast.error("Failed to generate Normal chart");
+      setIsRenkoActive(true);
+      // setRenkoData(null);
+    }
+  }
 
 
   async function handleCSVUpload(e) {
@@ -166,7 +259,9 @@ export default function TVChart() {
 
           setRerender((prev) => !prev);
         } else {
-          toast.error("Upload failed");
+          const err = JSON.parse(xhr.responseText);
+          toast.error(err.detail);
+          console.log(err.detail)
         }
       }
     };
@@ -310,25 +405,26 @@ export default function TVChart() {
       getBars: async function (symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
         try {
           const { from, to, countBack, firstDataRequest } = periodParams; 
+          let data;
           let url = "";
+          
           if (symbolInfo.type === "CSV" || symbolInfo.type === "JSON") {
-            // if (firstDataRequest && countBack) {
-            // url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm?to=${to}&countBack=${countBack}`;
-            // }
-            // else {
-            // url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm?from=${from}&to=${to}`;
-            // }
-            url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm`;
+              url = `${API_BASE}/file/${encodeURIComponent(symbolInfo.file_id)}/mtm`;
+              localStorage.setItem("currentFileID", symbolInfo.file_id);
           } else if (symbolInfo.type === "STRATEGY") {
-            url = `${API_BASE}/strategies/${encodeURIComponent(symbolInfo.name)}/mtm`;
+              // url = `${API_BASE}/strategies/mtm/strategy_name=${symbolInfo.name}`;
+              url = `${API_BASE}/strategies/mtm?strategy_name=${encodeURIComponent(symbolInfo.name)}`;
           } else if (symbolInfo.type === "PORTFOLIO") {
-            url = `${API_BASE}/portfolio/${encodeURIComponent(symbolInfo.name)}/mtm`;
+              url = `${API_BASE}/portfolio/${encodeURIComponent(symbolInfo.name)}/mtm`;
           }
+
           const response = await fetch(url);
           if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+              throw new Error(`HTTP ${response.status}`);
           }
-          const data = await response.json();
+            
+          data = await response.json();
+          
           if (!Array.isArray(data)) {
             onHistoryCallback([], { noData: true });
             return;
@@ -341,6 +437,7 @@ export default function TVChart() {
             low: parseFloat(item.low),
             close: parseFloat(item.close),
           }));
+          bars.sort((a, b) => a.time - b.time);
 
           const noData = bars.length === 0;    
           onHistoryCallback(bars, {noData});
@@ -393,8 +490,10 @@ export default function TVChart() {
               visible_plots_set: "ohlc",
               pricescale: 100,
               minmov: 1,
-              data_status: "streaming",
+              data_status: "streaming",              
+              
               supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"],
+
             });
           }
 
@@ -415,7 +514,9 @@ export default function TVChart() {
               pricescale: 100,
               minmov: 1,
               data_status: "streaming",
+              
               supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"],
+
             });
           }
 
@@ -435,7 +536,9 @@ export default function TVChart() {
               pricescale: 100,
               minmov: 1,
               data_status: "streaming",
+              
               supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"],
+
             });
           }
 
@@ -447,19 +550,16 @@ export default function TVChart() {
       unsubscribeBars: () => {},
     };
 
-    const defaultSymbol = strategies[0]
-      ? `${strategies[0].strategy}`
-      : csvFiles[0]
-      ? `${csvFiles[0].filename}`
-      : jsonFiles[0]
-      ? `${jsonFiles[0].filename}`
+    const defaultSymbol = csvFiles[0] ? `${csvFiles[0].filename}`
+      : strategies[0] ? `${strategies[0].strategy}`
+      : jsonFiles[0] ? `${jsonFiles[0].filename}`
       : "DEFAULT";
 
     chart = new widget({
       container: chartContainerRef.current,
       datafeed,
       symbol: defaultSymbol,
-      interval: "15",
+      interval: "1",
       library_path: "/charting_library/",
       theme: "dark",
       autosize: true,
@@ -472,6 +572,65 @@ export default function TVChart() {
     });
 
     tvWidgetRef.current = chart;
+
+    chart.onChartReady(() => {
+      const makeRenkoBtn = chart.createButton()
+      makeRenkoBtn.setAttribute("title", "Renko");
+      makeRenkoBtn.style.cursor = "default";
+      makeRenkoBtn.style.fontSize = "14px";
+      makeRenkoBtn.style.fontWeight = "600";
+      makeRenkoBtn.style.padding = "0 10px";
+
+      makeRenkoBtn.style.background = "#1e222d";
+      makeRenkoBtn.style.borderRadius = "6px";
+      makeRenkoBtn.style.padding = "4px 12px";
+      makeRenkoBtn.style.color = "#00ffcc";
+
+      makeRenkoBtn.innerHTML = 'Renko'
+
+      // const renkoOffBtn = chart.createButton()
+      // renkoOffBtn.setAttribute("title", "Renko");
+      // renkoOffBtn.style.cursor = "default";
+      // renkoOffBtn.style.fontSize = "14px";
+      // renkoOffBtn.style.fontWeight = "600";
+      // renkoOffBtn.style.padding = "0 10px";
+      
+      // renkoOffBtn.style.background = "#1e222d";
+      // renkoOffBtn.style.borderRadius = "6px";
+      // renkoOffBtn.style.padding = "4px 12px";
+      // renkoOffBtn.style.color = "#ff0037ff";
+
+      // renkoOffBtn.innerHTML = 'Renko OFF'
+
+
+      const uploadBtn = chart.createButton()
+      uploadBtn.setAttribute("title", "Upload CSV");
+      uploadBtn.style.cursor = "default";
+      uploadBtn.style.fontSize = "14px";
+      uploadBtn.style.fontWeight = "600";
+      uploadBtn.style.padding = "0 10px";
+
+      uploadBtn.style.background = "#1e222d";
+      uploadBtn.style.borderRadius = "6px";
+      uploadBtn.style.padding = "4px 12px";
+      uploadBtn.style.color = "#00ffcc";
+
+      uploadBtn.innerHTML = 'Upload CSV'
+      
+      makeRenkoBtn.addEventListener("click", () => {
+        setShowRenko(true)
+      });
+
+      uploadBtn.addEventListener("click", () => {
+        fileInputRef.current.click();
+      })
+
+      // renkoOffBtn.addEventListener("click", async () => {
+      //   await makeRenkoOff()
+      // })
+    }) 
+
+
 
     return () => chart.remove();
   }, [strategies, csvFiles, jsonFiles, portfolios]);
@@ -548,7 +707,7 @@ export default function TVChart() {
                   border: "1px solid #555",
                 }}
               >
-                <option value="">Select CSV/JSON to delete</option>
+                <option value="">Select CSV/JSON</option>
                 {/* CSV Files */}
                 {csvFiles.length > 0 && (
                   <optgroup label="CSV Files">
@@ -580,7 +739,7 @@ export default function TVChart() {
                   deleteFile(selectedFileToDelete);
                 }}
                 style={{
-                  background: "#922727ff",
+                  background: "#b02525ff",
                   padding: "6px 12px",
                   borderRadius: "6px",
                   color: "white",
@@ -590,41 +749,45 @@ export default function TVChart() {
                 Delete
               </button>
             </div>
+            <input
+              type="file"
+              accept=".csv, .json, application/json"
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleCSVUpload}
+            />
           </div>
 
           {/* Upload Section */}
-          <div
+          {uploading && (
+          <div 
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backdropFilter: "blur(6px)",
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 999,
+          }}  
+          >
+         <div
             style={{
               position: "absolute",
-              top: 10,
-              right: 250,
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
               zIndex: 20,
             }}
           >
-            <label
-              style={{
-                background: "#444",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                color: "white",
-                cursor: "pointer",
-                marginRight: "10px",
-              }}
-            >
-              Upload CSV / JSON
-              <input
-                type="file"
-                accept=".csv, .json, application/json"
-                style={{ display: "none" }}
-                onChange={handleCSVUpload}
-              />
-            </label>
-
-            {uploading && (
               <div
                 style={{
                   background: "#222",
-                  width: "150px",
+                  width: "350px",
                   height: "8px",
                   borderRadius: "8px",
                 }}
@@ -639,12 +802,148 @@ export default function TVChart() {
                   }}
                 />
               </div>
-            )}
           </div>
+          </div>
+            )}
+
+          {showRenko && (
+            <div 
+            style={{
+            position: "fixed", 
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "350px",
+            height: "400px",
+
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 999,
+          }}>
+            <div
+              style={{
+                width: "350px",
+                backdropFilter: "blur(6px)",
+                backgroundColor: "rgba(0, 0, 0, 0.3)",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+                color: "#fff",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              <h2 style={{ marginBottom: "20px", fontSize: "20px", fontWeight: 600 }}>
+                Create Renko
+              </h2>
+
+              {/* Brick Type */}
+              {/*<div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "14px", opacity: 0.8 }}>
+                  Brick Type
+                </label>
+                <select
+                  id="brickType"
+                  defaultValue="ohlc"
+                  style={inputStyle}
+                >
+                  <option value="ohlc" style={{ backgroundColor: "#181717ff", color: "#fff" }}>OHLC</option>
+                  <option value="close" style={{ backgroundColor: "#181717ff", color: "#fff" }}>Close</option>
+                </select>
+              </div>
+              */}
+
+              {/* Method */}
+              {/*<div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "14px", opacity: 0.8 }}>
+                  Method
+                </label>
+                <select
+                  id="method"
+                  defaultValue="atr"
+                  style={inputStyle}
+                >
+                  <option value="percentage" style={{ backgroundColor: "#181717ff", color: "#fff" }}>Percentage</option>
+                  <option value="atr" style={{ backgroundColor: "#181717ff", color: "#fff" }}>ATR</option>
+                  <option value="traditional" style={{ backgroundColor: "#181717ff", color: "#fff" }}>Traditional</option>
+                </select>
+              </div>*/}
+              
+              {/* Value */}
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ fontSize: "14px", opacity: 0.8 }}>
+                  Brick Percentage Value (%)
+                </label>
+                <input
+                  id="value"
+                  type="number"
+                  step="0.01"
+                  defaultValue="0.5"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Margin */}
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ fontSize: "14px", opacity: 0.8 }}>
+                  Total Margin
+                </label>
+                <input
+                  id="margin"
+                  type="number"
+                  step="1"
+                  defaultValue="0"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <button
+                  onClick={() => setShowRenko(false)}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid #555",
+                    color: "#ccc",
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+                    // const brickType = document.getElementById("brickType").value;
+                    // const method = document.getElementById("method").value;
+                    const value = document.getElementById("value").value;
+                    const totalMargin = document.getElementById("margin").value;
+
+                    // await requestRenko("close", "percentage", value);
+                    await requestRenko(value, totalMargin)
+                  }}
+                  style={{
+                    background: "#2962ff",
+                    border: "none",
+                    color: "#fff",
+                    padding: "8px 18px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: 500,
+                  }}
+                >
+                  Generate
+                </button>
+              </div>
+            </div>
+
+            </div>
+          )}
 
           <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
         </div>
       )}
     </>
   );
-}
+} 
